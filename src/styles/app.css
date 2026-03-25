@@ -61,7 +61,6 @@ body,
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
-  user-select: none;
 }
 
 /* ── Scrollbar ──────────────────────────────────────────────────────────── */
@@ -2096,9 +2095,11 @@ body,
 /* ── Inputs (general) ─────────────────────────────────────────────────── */
 input,
 textarea,
-select {
+select,
+[contenteditable="true"] {
   -webkit-user-select: text !important;
   user-select: text !important;
+  -webkit-app-region: no-drag !important;
 }
 button {
   -webkit-user-select: none;

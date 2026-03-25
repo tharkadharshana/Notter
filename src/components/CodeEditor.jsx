@@ -284,6 +284,8 @@ export default function CodeEditor() {
   // ── Build extension set ──────────────────────────────────────────────────
   const buildExtensions = useCallback(
     (onMarkerChange) => [
+      EditorView.editable.of(true),
+      EditorState.readOnly.of(false),
       lineNumbers(),
       highlightActiveLineGutter(),
       foldGutter(),
@@ -344,6 +346,7 @@ export default function CodeEditor() {
           height: "100%",
           background: "#0d0d0f",
           WebkitAppRegion: "no-drag",
+          pointerEvents: "all",
         },
         ".cm-content": {
           fontFamily:
