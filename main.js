@@ -71,6 +71,13 @@ async function initDatabase() {
       color TEXT NOT NULL,
       PRIMARY KEY (document_id, line_number)
     );
+    CREATE TABLE IF NOT EXISTS marker_tags (
+      document_id TEXT NOT NULL,
+      color TEXT NOT NULL,
+      emoji TEXT DEFAULT '',
+      label TEXT DEFAULT '',
+      PRIMARY KEY (document_id, color)
+    );
   `);
 
   // Seed default workspaces
@@ -328,7 +335,23 @@ function setupIPC() {
     else        dbRun('INSERT OR REPLACE INTO markers (document_id,line_number,color) VALUES (?,?,?)', [docId, line, color]);
     return true;
   });
-  ipcMain.handle('marker:clear', (_, docId) => { dbRun('DELETE FROM markers WHERE document_id=?', [docId]); return true; });
+  ipcMain.handle('marker:clear',    (_, docId) => { dbRun('DELETE FROM markers WHERE document_id=?', [docId]); return true; });
+  ipcMain.handle('marker:getTags',  (_, docId) => {
+    const rows = dbAll('SELECT color, emoji, label FROM marker_tags WHERE document_id=?', [docId]);
+    const result = {};
+    for (const r of rows) result[r.color] = { emoji: r.emoji || '', text: r.label || '' };
+    return result;
+  });
+  ipcMain.handle('marker:saveTags', (_, { docId, tags }) => {
+    dbRun('DELETE FROM marker_tags WHERE document_id=?', [docId]);
+    for (const [color, tag] of Object.entries(tags || {})) {
+      if (tag?.emoji || tag?.text) {
+        dbRun('INSERT INTO marker_tags (document_id,color,emoji,label) VALUES (?,?,?,?)',
+          [docId, color, tag.emoji || '', tag.text || '']);
+      }
+    }
+    return true;
+  });
 
   // Search (full-text across all docs)
   ipcMain.handle('search:all', (_, query) => {

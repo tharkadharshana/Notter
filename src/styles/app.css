@@ -898,3 +898,114 @@ button { -webkit-user-select: none; user-select: none; }
   from { opacity:0; transform:translateY(8px); }
   to   { opacity:1; transform:translateY(0); }
 }
+
+.format-btn {
+  color: #22c55e;
+  background: #22c55e18;
+  border-color: #22c55e44 !important;
+  font-weight: 500;
+}
+.format-btn:hover { background: #22c55e28; border-color: #22c55e !important; }
+.format-btn:disabled { opacity: 0.35; cursor: default; }
+
+/* ── Sidebar topbar ───────────────────────────────────────────────── */
+.sidebar-topbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 10px 6px;
+  flex-shrink: 0;
+}
+.sidebar-new-doc-top {
+  flex: 1; display: flex; align-items: center; gap: 7px;
+  padding: 8px 12px;
+  background: var(--accent); border: none;
+  border-radius: var(--radius-sm); color: #fff;
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: background 0.15s, transform 0.1s;
+}
+.sidebar-new-doc-top:hover  { background: var(--accent2); }
+.sidebar-new-doc-top:active { transform: scale(0.97); }
+.sidebar-new-doc-plus { font-size: 18px; line-height: 1; }
+.sidebar-search-sm {
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg4); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); cursor: pointer;
+  font-size: 16px; color: var(--text3);
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.sidebar-search-sm:hover { color: var(--text0); border-color: var(--border2); }
+
+/* ── Tag menu ─────────────────────────────────────────────────────── */
+.tag-menu-overlay {
+  position: fixed; inset: 0; z-index: 99999;
+  background: transparent;
+}
+.tag-menu {
+  position: fixed; z-index: 100000;
+  width: 270px;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); box-shadow: 0 16px 48px #000000aa;
+  padding: 0; overflow: hidden;
+  animation: fadeInUp 0.12s ease;
+}
+.tag-menu-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  font-size: 13px; color: var(--text1);
+}
+.tag-menu-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.tag-menu-close {
+  margin-left: auto; background: none; border: none;
+  color: var(--text3); cursor: pointer; font-size: 14px;
+  padding: 2px 4px; border-radius: 3px;
+}
+.tag-menu-close:hover { color: var(--red); }
+
+.tag-menu-emoji-row {
+  display: flex; flex-wrap: wrap; gap: 4px; padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.tag-emoji-btn {
+  width: 28px; height: 28px; border-radius: 6px;
+  background: var(--bg4); border: 1px solid var(--border);
+  cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s, border-color 0.1s;
+}
+.tag-emoji-btn:hover { background: var(--bg5); border-color: var(--border2); }
+.tag-emoji-btn.sel   { background: var(--accentbg); border-color: var(--accent3); }
+
+.tag-menu-field {
+  padding: 8px 12px 4px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.tag-menu-field label { font-size: 11px; color: var(--text3); }
+.tag-menu-input {
+  width: 100%; padding: 6px 9px;
+  background: var(--bg4); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text0);
+  font-family: var(--sans); font-size: 12px; outline: none;
+  user-select: text;
+}
+.tag-menu-input:focus { border-color: var(--accent2); }
+
+.tag-menu-footer {
+  display: flex; gap: 6px; justify-content: flex-end;
+  padding: 10px 12px; border-top: 1px solid var(--border);
+}
+.tag-menu-clear {
+  padding: 6px 10px; background: none; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text3);
+  font-size: 12px; cursor: pointer;
+}
+.tag-menu-clear:hover { color: var(--red); border-color: var(--red); }
+.tag-menu-save {
+  padding: 6px 14px; background: var(--accent); border: none;
+  border-radius: var(--radius-sm); color: #fff;
+  font-size: 12px; cursor: pointer; font-weight: 500;
+}
+.tag-menu-save:hover { background: var(--accent2); }
+
+.toolbar-btn:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+

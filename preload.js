@@ -34,7 +34,9 @@ contextBridge.exposeInMainWorld('vault', {
   marker: {
     get:   docId  => ipcRenderer.invoke('marker:get', docId),
     set:   d      => ipcRenderer.invoke('marker:set', d),
-    clear: docId  => ipcRenderer.invoke('marker:clear', docId),
+    clear:    docId  => ipcRenderer.invoke('marker:clear', docId),
+    getTags:  docId  => ipcRenderer.invoke('marker:getTags', docId),
+    saveTags: d      => ipcRenderer.invoke('marker:saveTags', d),
   },
   search: {
     all: q => ipcRenderer.invoke('search:all', q),

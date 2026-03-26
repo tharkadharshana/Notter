@@ -93,11 +93,19 @@ export default function Sidebar() {
 
   return (
     <div className="sidebar">
-      {/* Search */}
-      <div className="sidebar-search" onClick={() => setShowSearch(true)}>
-        <span className="sb-search-icon">⌕</span>
-        <span className="sb-search-placeholder">Search vault…</span>
-        <kbd className="sb-search-kbd">⌘K</kbd>
+      {/* ── Top bar: New doc + Search ── */}
+      <div className="sidebar-topbar">
+        <button
+          className="sidebar-new-doc-top"
+          onClick={() => setShowNewDoc(p => !p)}
+          title="New document"
+        >
+          <span className="sidebar-new-doc-plus">＋</span>
+          New Doc
+        </button>
+        <div className="sidebar-search-sm" onClick={() => setShowSearch(true)} title="Search vault (Ctrl+K)">
+          <span>⌕</span>
+        </div>
       </div>
 
       {/* Workspaces */}
