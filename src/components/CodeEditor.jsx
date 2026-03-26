@@ -450,13 +450,14 @@ Rules:
         hasActiveTab={!noTab}
       />
 
-      <div className="editor-body">
-        {/* cm-container is ALWAYS rendered so EditorView always has a DOM parent */}
-        <div ref={containerRef} className="cm-container" style={{ visibility: noTab ? 'hidden' : 'visible' }} />
-
-        {/* Empty state overlay — shown on top when no tab is open */}
-        {noTab && (
-          <div className="editor-empty">
+      <div style={{ position: 'relative', flex: 1, overflow: 'hidden', minHeight: 0, display: 'flex' }}>
+        <div
+          ref={containerRef}
+          className="cm-container"
+          style={{ position: 'absolute', inset: 0 }}
+        />
+        {!activeTab && (
+          <div className="editor-empty" style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
             <div className="editor-empty-icon">⬡</div>
             <div className="editor-empty-text">Open a document or create a scratch pad</div>
           </div>
