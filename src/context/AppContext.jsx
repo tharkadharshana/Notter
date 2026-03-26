@@ -4,34 +4,53 @@ const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
 
 export function AppProvider({ children }) {
-  const [workspaces,    setWorkspaces]    = useState([]);
-  const [activeWsId,    setActiveWsId]    = useState(null);
-  const [documents,     setDocuments]     = useState([]);
-  const [tabs,          setTabs]          = useState([]);
-  const [activeTabId,   setActiveTabId]   = useState(null);
-  const [settings,      setSettings]      = useState({});
-  const [showSettings,  setShowSettings]  = useState(false);
-  const [showSearch,    setShowSearch]    = useState(false);
-  const saveTimers = useRef({});
+  const [workspaces,   setWorkspaces]   = useState([]);
+  const [activeWsId,   setActiveWsId]   = useState(null);
+  const [documents,    setDocuments]    = useState([]);
+  const [tabs,         setTabs]         = useState([]);
+  const [activeTabId,  setActiveTabId]  = useState(null);
+  const [settings,     setSettings]     = useState({});
+  const [showSettings, setShowSettings] = useState(false);
+  const [showSearch,   setShowSearch]   = useState(false);
+
+  const saveTimers   = useRef({});
+  // FIX #6: keep a ref to tabs so save timers always see current tabs without stale closure
+  const tabsRef      = useRef([]);
+  const activeTabRef = useRef(null);
+
+  useEffect(() => { tabsRef.current = tabs; }, [tabs]);
+
+  const activeTab = tabs.find(t => t.id === activeTabId) || null;
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    Promise.all([window.vault.ws.all(), window.vault.settings.get(), window.vault.tab.all()]).then(([wsList, sett, savedTabs]) => {
+    Promise.all([
+      window.vault.ws.all(),
+      window.vault.settings.get(),
+      window.vault.tab.all()
+    ]).then(([wsList, sett, savedTabs]) => {
       setWorkspaces(wsList);
       setSettings(sett);
+
       if (wsList.length > 0) {
         setActiveWsId(wsList[0].id);
-        loadDocuments(wsList[0].id);
+        window.vault.doc.list(wsList[0].id).then(docs => setDocuments(docs));
       }
-      if (savedTabs.length > 0) {
+
+      if (savedTabs && savedTabs.length > 0) {
         setTabs(savedTabs);
         const active = savedTabs.find(t => t.is_active) || savedTabs[savedTabs.length - 1];
         setActiveTabId(active.id);
       } else {
-        openNewScratch();
+        // FIX #7: defer scratch creation so DB is ready
+        setTimeout(() => _openNewScratch(), 100);
       }
+    }).catch(err => {
+      console.error('Bootstrap error:', err);
+      setTimeout(() => _openNewScratch(), 200);
     });
-  }, []);
+  }, []); // eslint-disable-line
 
   // ── Documents ──────────────────────────────────────────────────────────────
   const loadDocuments = useCallback(async (wsId) => {
@@ -45,77 +64,109 @@ export function AppProvider({ children }) {
   }, [loadDocuments]);
 
   const createDocument = useCallback(async ({ title, entryType = 'note', isFolder = false, parentId = null }) => {
-    const id = await window.vault.doc.create({ wsId: activeWsId, parentId, title, content: '', entryType, isFolder });
-    await loadDocuments(activeWsId);
+    const wsId = activeWsId;
+    const id   = await window.vault.doc.create({ wsId, parentId, title, content: '', entryType, isFolder });
+    await loadDocuments(wsId);
     return id;
   }, [activeWsId, loadDocuments]);
 
   const deleteDocument = useCallback(async (id) => {
     await window.vault.doc.delete(id);
-    setTabs(prev => prev.filter(t => t.document_id !== id));
-    await loadDocuments(activeWsId);
-  }, [activeWsId]);
+    // Close any open tabs for this doc
+    setTabs(prev => {
+      const filtered = prev.filter(t => t.document_id !== id);
+      // if the deleted doc's tab was active, switch to last tab
+      if (prev.find(t => t.document_id === id && t.id === activeTabRef.current?.id)) {
+        const last = filtered[filtered.length - 1];
+        if (last) setActiveTabId(last.id);
+      }
+      return filtered;
+    });
+    const wsId = activeWsId;
+    if (wsId) await loadDocuments(wsId);
+  }, [activeWsId, loadDocuments]);
 
   const renameDocument = useCallback(async (id, title) => {
     await window.vault.doc.update({ id, title });
-    await loadDocuments(activeWsId);
     setTabs(prev => prev.map(t => t.document_id === id ? { ...t, title } : t));
-  }, [activeWsId]);
+    if (activeWsId) await loadDocuments(activeWsId);
+  }, [activeWsId, loadDocuments]);
 
   // ── Tabs ───────────────────────────────────────────────────────────────────
-  const openNewScratch = useCallback(() => {
-    const id = crypto.randomUUID();
-    const tab = { id, document_id: null, title: 'scratch', content: '', is_scratch: 1, tab_order: 0, is_active: 1 };
+  function _openNewScratch() {
+    const id  = crypto.randomUUID();
+    const tab = { id, document_id: null, title: 'scratch', content: '', is_scratch: 1, tab_order: Date.now(), is_active: 1 };
     setTabs(prev => [...prev, tab]);
     setActiveTabId(id);
-    window.vault.tab.save({ id, title: 'scratch', content: '', isScratch: true, tabOrder: Date.now(), isActive: true });
-  }, []);
+    try {
+      window.vault.tab.save({ id, title: 'scratch', content: '', isScratch: true, tabOrder: tab.tab_order, isActive: true });
+    } catch(e) { console.warn('tab save:', e); }
+  }
+
+  const openNewScratch = useCallback(() => { _openNewScratch(); }, []); // eslint-disable-line
 
   const openDocInTab = useCallback(async (docId, title) => {
-    const existing = tabs.find(t => t.document_id === docId);
+    // Check if already open using the ref for latest tabs
+    const existing = tabsRef.current.find(t => t.document_id === docId);
     if (existing) { setActiveTabId(existing.id); return; }
+
     const doc = await window.vault.doc.get(docId);
+    if (!doc) return;
     const id  = crypto.randomUUID();
-    const tab = { id, document_id: docId, title: title || doc.title, content: doc.content, is_scratch: 0, tab_order: Date.now(), is_active: 1 };
+    const tab = {
+      id, document_id: docId, title: title || doc.title,
+      content: doc.content, is_scratch: 0, tab_order: Date.now(), is_active: 1
+    };
     setTabs(prev => [...prev, tab]);
     setActiveTabId(id);
     window.vault.tab.save({ id, documentId: docId, title: tab.title, content: doc.content, isScratch: false, tabOrder: tab.tab_order, isActive: true });
-  }, [tabs]);
+  }, []); // eslint-disable-line — uses tabsRef
 
   const closeTab = useCallback((tabId) => {
     setTabs(prev => {
       const idx  = prev.findIndex(t => t.id === tabId);
       const next = prev.filter(t => t.id !== tabId);
-      if (activeTabId === tabId && next.length > 0) {
-        const newActive = next[Math.min(idx, next.length - 1)];
-        setActiveTabId(newActive.id);
-      } else if (next.length === 0) {
-        setTimeout(openNewScratch, 0);
+      if (activeTabRef.current?.id === tabId) {
+        if (next.length > 0) {
+          const newActive = next[Math.min(idx, next.length - 1)];
+          setActiveTabId(newActive.id);
+        } else {
+          setActiveTabId(null);
+          setTimeout(_openNewScratch, 50);
+        }
       }
       return next;
     });
     window.vault.tab.delete(tabId);
-  }, [activeTabId, openNewScratch]);
+  }, []); // eslint-disable-line
 
   // ── Content update (debounced auto-save) ──────────────────────────────────
   const updateTabContent = useCallback((tabId, content) => {
+    if (!tabId) return;
     setTabs(prev => prev.map(t => t.id === tabId ? { ...t, content } : t));
-    // Debounced DB save
+
     clearTimeout(saveTimers.current[tabId]);
     saveTimers.current[tabId] = setTimeout(() => {
-      const tab = tabs.find(t => t.id === tabId) || {};
-      window.vault.tab.save({ id: tabId, documentId: tab.document_id || null, title: tab.title || 'scratch', content, isScratch: !tab.document_id, tabOrder: tab.tab_order || 0, isActive: tab.id === activeTabId });
+      // FIX #6: use tabsRef.current to get latest tabs — never stale
+      const tab = tabsRef.current.find(t => t.id === tabId);
+      if (!tab) return;
+      window.vault.tab.save({
+        id: tabId, documentId: tab.document_id || null,
+        title: tab.title || 'scratch', content,
+        isScratch: !tab.document_id, tabOrder: tab.tab_order || 0,
+        isActive: tab.id === activeTabRef.current?.id
+      });
       if (tab.document_id) {
         window.vault.doc.update({ id: tab.document_id, content });
       }
     }, 600);
-  }, [tabs, activeTabId]);
+  }, []); // eslint-disable-line — uses refs only
 
   const updateTabTitle = useCallback((tabId, title) => {
     setTabs(prev => prev.map(t => t.id === tabId ? { ...t, title } : t));
-    const tab = tabs.find(t => t.id === tabId);
+    const tab = tabsRef.current.find(t => t.id === tabId);
     if (tab?.document_id) renameDocument(tab.document_id, title);
-  }, [tabs, renameDocument]);
+  }, [renameDocument]);
 
   // ── Settings ───────────────────────────────────────────────────────────────
   const saveSettings = useCallback(async (s) => {
@@ -136,8 +187,6 @@ export function AppProvider({ children }) {
     setWorkspaces(updated);
     if (activeWsId === id && updated.length > 0) selectWorkspace(updated[0].id);
   }, [activeWsId, selectWorkspace]);
-
-  const activeTab = tabs.find(t => t.id === activeTabId) || null;
 
   return (
     <Ctx.Provider value={{
